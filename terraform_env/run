@@ -3,7 +3,7 @@
 IMAGE_NAME="terraform-aws"
 CONTAINER_NAME="terraform-aws-container"
 DOCKERFILE_DIR="$(dirname "$0")"
-PROJECT_DIR="$(cd "$DOCKERFILE_DIR/.." && pwd)"
+IAC_DIR="$(cd "$DOCKERFILE_DIR/../iac" && pwd)"
 
 # Check if image exists
 if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
@@ -13,8 +13,15 @@ else
     echo "Docker image $IMAGE_NAME already exists."
 fi
 
-# Run the container interactively, mounting the project directory as /env
-exec docker run --rm -it \
-    -v "$PROJECT_DIR:/env" \
-    -w /env \
-    $IMAGE_NAME
+# Check if container exists
+if docker ps -a --format '{{.Names}}' | grep -Eq "^$CONTAINER_NAME$"; then
+    echo "Container $CONTAINER_NAME already exists. Starting it..."
+    exec docker start -ai $CONTAINER_NAME
+else
+    echo "Creating and starting new container $CONTAINER_NAME..."
+    exec docker run -it \
+        --name $CONTAINER_NAME \
+        -v "$IAC_DIR:/env" \
+        -w /env \
+        $IMAGE_NAME
+fi
