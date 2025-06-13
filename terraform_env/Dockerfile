@@ -2,8 +2,8 @@
 FROM hashicorp/terraform:light
 
 # Add entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY aws_creds /aws_creds
+RUN chmod +x /aws_creds
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/aws_creds"]
 CMD ["sh"]

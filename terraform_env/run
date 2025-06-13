@@ -1,0 +1,20 @@
+#!/bin/sh
+
+IMAGE_NAME="terraform-aws"
+CONTAINER_NAME="terraform-aws-container"
+DOCKERFILE_DIR="$(dirname "$0")"
+PROJECT_DIR="$(cd "$DOCKERFILE_DIR/.." && pwd)"
+
+# Check if image exists
+if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
+    echo "Docker image $IMAGE_NAME not found. Building..."
+    docker build -t $IMAGE_NAME "$DOCKERFILE_DIR"
+else
+    echo "Docker image $IMAGE_NAME already exists."
+fi
+
+# Run the container interactively, mounting the project directory as /env
+exec docker run --rm -it \
+    -v "$PROJECT_DIR:/env" \
+    -w /env \
+    $IMAGE_NAME
