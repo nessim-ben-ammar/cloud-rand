@@ -1,0 +1,32 @@
+{
+  "name": "cloud-rand Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": ["--env-file", ".devcontainer/.env"],
+  "shutdownAction": "stopContainer",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "hashicorp.terraform",
+        "esbenp.prettier-vscode",
+        "github.copilot"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/lambda/.venv/bin/python",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        }
+      }
+    }
+  },
+  "postCreateCommand": "[ -d lambda/.venv ] && echo '[INFO] .venv already exists. Skipping setup.' || (echo '[INFO] Creating .venv...' && python -m venv lambda/.venv && lambda/.venv/bin/pip install --upgrade pip && [ -f lambda/requirements.txt ] && lambda/.venv/bin/pip install -r lambda/requirements.txt || echo '[INFO] No requirements.txt found.')",
+  "remoteUser": "vscode"
+}
