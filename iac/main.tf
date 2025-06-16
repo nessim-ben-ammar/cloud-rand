@@ -10,12 +10,12 @@ module "apigateway-v1" {
       {
         path   = "int"
         method = "POST"
-        uri    = module.cloud-rand-int.lambda_function_arn
+        uri    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-int.lambda_function_arn}/invocations"
       },
       {
         path   = "hex"
         method = "POST"
-        uri    = module.cloud-rand-hex.lambda_function_arn
+        uri    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-hex.lambda_function_arn}/invocations"
       }
     ]
   }
@@ -32,17 +32,19 @@ module "cloud-rand-int" {
   publish        = true
   create_package = false
 
-  local_existing_package = data.archive_file.int_lambda_zip.output_path
+  local_existing_package = data.archive_file.lambda_zip.output_path
 
   cloudwatch_logs_retention_in_days = 7
-
-  allowed_triggers = {
-    AllowExecutionFromAPIGateway = {
-      service    = "apigateway"
-      source_arn = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
-    }
-  }
 }
+
+resource "aws_lambda_permission" "int_api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = module.cloud-rand-int.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
+}
+
 
 module "cloud-rand-hex" {
   source  = "terraform-aws-modules/lambda/aws"
@@ -55,14 +57,15 @@ module "cloud-rand-hex" {
   publish        = true
   create_package = false
 
-  local_existing_package = data.archive_file.int_lambda_zip.output_path
+  local_existing_package = data.archive_file.lambda_zip.output_path
 
   cloudwatch_logs_retention_in_days = 7
+}
 
-  allowed_triggers = {
-    AllowExecutionFromAPIGateway = {
-      service    = "apigateway"
-      source_arn = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
-    }
-  }
+resource "aws_lambda_permission" "hex_api_gw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = module.cloud-rand-hex.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
 }
