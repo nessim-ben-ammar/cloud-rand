@@ -29,12 +29,27 @@ module "cloud-rand-int" {
   handler        = "int.handler"
   runtime        = "python3.12"
   architectures  = ["arm64"]
+  attach_policy  = true
+  policy         = aws_iam_policy.cloud-rand-prod-kms-generate-random.arn
   publish        = true
   create_package = false
 
   local_existing_package = data.archive_file.lambda_zip.output_path
 
   cloudwatch_logs_retention_in_days = 7
+}
+
+resource "aws_iam_policy" "cloud-rand-prod-kms-generate-random" {
+  name        = "cloud-rand-prod-kms-generate-random"
+  description = "Policy to allow KMS GenerateRandom for cloud-rand-prod Lambda functions"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = "kms:GenerateRandom",
+      Resource = "*"
+    }]
+  })
 }
 
 resource "aws_lambda_permission" "int_api_gw" {
@@ -54,6 +69,8 @@ module "cloud-rand-hex" {
   handler        = "hex.handler"
   runtime        = "python3.12"
   architectures  = ["arm64"]
+  attach_policy  = true
+  policy         = aws_iam_policy.cloud-rand-prod-kms-generate-random.arn
   publish        = true
   create_package = false
 
