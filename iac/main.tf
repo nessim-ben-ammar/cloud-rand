@@ -23,18 +23,8 @@ module "apigateway-v1" {
       {
         path             = "verify"
         method           = "GET"
-        integration_type = "AWS"
-        uri              = "arn:aws:apigateway:${var.region}:dynamodb:action/GetItem"
-        request_templates = {
-          "application/json" = <<EOF
-{
-  "TableName": "cloud-rand-prod-operation-records",
-  "Key": {
-    "record_id": { "S": "$input.params('record_id')" }
-  }
-}
-EOF
-        }
+        integration_type = "AWS_PROXY"
+        uri              = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-verify.lambda_function_arn}/invocations"
       }
     ]
   }
@@ -111,6 +101,28 @@ module "cloud-rand-hex" {
   }
 }
 
+module "cloud-rand-verify" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 7.21.0"
+
+  function_name  = "cloud-rand-prod-verify"
+  handler        = "verify.handler"
+  runtime        = "python3.12"
+  architectures  = ["arm64"]
+  attach_policy  = true
+  policy         = aws_iam_policy.cloud-rand-prod-service-access.arn
+  publish        = true
+  create_package = false
+
+  local_existing_package = data.archive_file.lambda_zip.output_path
+
+  cloudwatch_logs_retention_in_days = 7
+
+  environment_variables = {
+    DYNAMODB_TABLE_NAME = aws_dynamodb_table.cloud-rand-prod-operation-records.name
+  }
+}
+
 resource "aws_lambda_permission" "int_api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
@@ -123,6 +135,14 @@ resource "aws_lambda_permission" "hex_api_gw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = module.cloud-rand-hex.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "verify_api_gw" {
+  statement_id  = "AllowExecutionFromAPIGatewayVerify"
+  action        = "lambda:InvokeFunction"
+  function_name = module.cloud-rand-verify.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
 }

@@ -32,14 +32,16 @@ resource "aws_api_gateway_integration" "this" {
 }
 
 locals {
-  verify_key = [for k, ep in var.apigw-config.endpoints : k if ep.path == "verify" && ep.method == "GET"][0]
+  verify_key    = [for k, ep in var.apigw-config.endpoints : k if ep.path == "verify" && ep.method == "GET"][0]
+  verify_is_aws = try(var.apigw-config.endpoints[local.verify_key].integration_type == "AWS", false)
 }
 
 resource "aws_api_gateway_integration_response" "verify_get_200" {
+  count       = local.verify_is_aws ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.this.id
   resource_id = aws_api_gateway_resource.this[local.verify_key].id
   http_method = aws_api_gateway_method.this[local.verify_key].http_method
-  status_code = aws_api_gateway_method_response.verify_get_200.status_code
+  status_code = "200"
   response_templates = {
     "application/json" = <<EOF
 #set($inputRoot = $input.path('$'))
@@ -56,6 +58,7 @@ EOF
 }
 
 resource "aws_api_gateway_method_response" "verify_get_200" {
+  count       = local.verify_is_aws ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.this.id
   resource_id = aws_api_gateway_resource.this[local.verify_key].id
   http_method = aws_api_gateway_method.this[local.verify_key].http_method
