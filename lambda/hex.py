@@ -1,14 +1,13 @@
 import boto3
 import datetime
 import json
-import random
+import os
 import uuid
 from botocore.exceptions import BotoCoreError, ClientError
 
 # Constants
 MAX_COUNT = 1024
 MAX_BYTES_TOTAL = 1024
-KMS_CHUNK_SIZE = 1024
 
 
 def _response(status_code, body):
@@ -21,75 +20,88 @@ def _response(status_code, body):
 
 def handler(event, context):
     """
-    Lambda handler to generate verifiable random integers using AWS KMS.
+    Lambda handler to generate verifiable random hex strings using AWS KMS.
 
     Request body JSON:
     {
-        "min": int,
-        "max": int,
+        "length": int,
         "count": int (default=1)
     }
 
     Returns:
     {
         "record_id": UUID,
-        "values": List[int]
+        "values": List[str]
     }
     """
     try:
-        body = json.loads(event.get("body", "{}"))
+        request_data = json.loads(event.get("body", "{}"))
 
         try:
-            length = int(body["length"])
-            count = int(body.get("count", 1))
+            bytes_per_value = int(request_data["length"])
+            count = int(request_data.get("count", 1))
         except (KeyError, ValueError, TypeError):
-            return _response(400, {"error": "lenth and count must be valid integers"})
+            return _response(400, {"error": "length and count must be valid integers"})
 
         if not (1 <= count <= MAX_COUNT):
             return _response(400, {"error": f"Count must be between 1 and {MAX_COUNT}"})
-        if not (1 <= length <= MAX_BYTES_TOTAL):
+        if not (1 <= bytes_per_value <= MAX_BYTES_TOTAL):
             return _response(
-                400, {"error": "Length must be between 1 and {MAX_BYTES_TOTAL}"}
+                400, {"error": f"Length must be between 1 and {MAX_BYTES_TOTAL}"}
             )
 
-        size = length * count
+        total_bytes = bytes_per_value * count
 
-        if size > MAX_BYTES_TOTAL:
+        if total_bytes > MAX_BYTES_TOTAL:
             return _response(
                 400,
                 {
-                    "error": "The combined length of the values exceeds {MAX_BYTES_TOTAL} bytes. Please reduce the count or the length."
+                    "error": f"The combined length of the values exceeds {MAX_BYTES_TOTAL} bytes. Please reduce the count or the length."
                 },
             )
 
         try:
             kms = boto3.client("kms")
-            src_bytes = kms.generate_random(NumberOfBytes=size)["Plaintext"]
+            entropy_pool = kms.generate_random(NumberOfBytes=total_bytes)["Plaintext"]
         except (BotoCoreError, ClientError, KeyError) as e:
             return _response(
                 500, {"error": "Randomness service unavailable", "details": str(e)}
             )
 
-        random_values = []
-
+        hex_chunks = []
         for i in range(count):
-            random_value = src_bytes[i * length : (i + 1) * length]
-            random_values.append(random_value.hex())  # Convert bytes to hex string
+            chunk = entropy_pool[i * bytes_per_value : (i + 1) * bytes_per_value]
+            hex_chunks.append(chunk.hex())
 
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+        record_id = str(uuid.uuid4())
         operation_record = {
-            "record_id": str(uuid.uuid4()),
+            "record_id": record_id,
             "timestamp": timestamp,
-            "length": length,
+            "length": bytes_per_value,
             "count": count,
-            "values": random_values,
+            "values": hex_chunks,
         }
 
+        table_name = os.environ.get("DYNAMODB_TABLE_NAME")
+        if not table_name:
+            return _response(
+                500, {"error": "DYNAMODB_TABLE_NAME environment variable not set"}
+            )
+
+        try:
+            dynamodb = boto3.resource("dynamodb")
+            table = dynamodb.Table(table_name)  # type: ignore
+            table.put_item(Item=operation_record)
+        except (BotoCoreError, ClientError) as e:
+            return _response(
+                500, {"error": "DynamoDB service unavailable", "details": str(e)}
+            )
+
         response_body = {
-            "record_id": operation_record["record_id"],
-            "src_chunk": src_bytes.hex(),  # Convert bytes to hex string
-            "values": operation_record["values"],
+            "record_id": record_id,
+            "values": hex_chunks,
         }
 
         return _response(200, response_body)

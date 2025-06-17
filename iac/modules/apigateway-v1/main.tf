@@ -24,8 +24,46 @@ resource "aws_api_gateway_integration" "this" {
   resource_id             = aws_api_gateway_resource.this[each.key].id
   http_method             = aws_api_gateway_method.this[each.key].http_method
   integration_http_method = "POST"
-  type                    = "AWS_PROXY"
+  type                    = each.value.integration_type
   uri                     = each.value.uri
+
+  credentials       = each.value.integration_type == "AWS" ? var.apigw-config.role_arn : null
+  request_templates = try(each.value.request_templates, null)
+}
+
+locals {
+  verify_key = [for k, ep in var.apigw-config.endpoints : k if ep.path == "verify" && ep.method == "GET"][0]
+}
+
+resource "aws_api_gateway_integration_response" "verify_get_200" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this[local.verify_key].id
+  http_method = aws_api_gateway_method.this[local.verify_key].http_method
+  status_code = aws_api_gateway_method_response.verify_get_200.status_code
+  response_templates = {
+    "application/json" = <<EOF
+#set($inputRoot = $input.path('$'))
+#if($inputRoot.Item)
+$input.json('$.Item')
+#else
+{
+  "Item": null,
+  "message": "Item not found"
+}
+#end
+EOF
+  }
+}
+
+resource "aws_api_gateway_method_response" "verify_get_200" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this[local.verify_key].id
+  http_method = aws_api_gateway_method.this[local.verify_key].http_method
+  status_code = "200"
+
+  response_models = {
+    "application/json" = "Empty"
+  }
 }
 
 resource "aws_api_gateway_deployment" "this" {
