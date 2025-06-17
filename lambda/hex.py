@@ -82,6 +82,7 @@ def handler(event, context):
             "length": bytes_per_value,
             "count": count,
             "values": hex_chunks,
+            "seed": entropy_pool.hex(),
         }
 
         table_name = os.environ.get("DYNAMODB_TABLE_NAME")

@@ -6,25 +6,21 @@ module "apigateway-v1" {
     stage       = "v1"
     rate_limit  = 100
     burst_limit = 100
-    role_arn    = aws_iam_role.apigw_dynamodb_role.arn
     endpoints = [
       {
-        path             = "int"
-        method           = "POST"
-        integration_type = "AWS_PROXY"
-        uri              = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-int.lambda_function_arn}/invocations"
+        path   = "int"
+        method = "POST"
+        uri    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-int.lambda_function_arn}/invocations"
       },
       {
-        path             = "hex"
-        method           = "POST"
-        integration_type = "AWS_PROXY"
-        uri              = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-hex.lambda_function_arn}/invocations"
+        path   = "hex"
+        method = "POST"
+        uri    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-hex.lambda_function_arn}/invocations"
       },
       {
-        path             = "verify"
-        method           = "GET"
-        integration_type = "AWS_PROXY"
-        uri              = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-verify.lambda_function_arn}/invocations"
+        path   = "verify"
+        method = "GET"
+        uri    = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${module.cloud-rand-verify.lambda_function_arn}/invocations"
       }
     ]
   }
@@ -182,49 +178,6 @@ resource "aws_iam_policy" "cloud-rand-prod-service-access" {
           "dynamodb:PutItem"
         ],
         Resource = aws_dynamodb_table.cloud-rand-prod-operation-records.arn
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role" "apigw_dynamodb_role" {
-  name = "apigw-dynamodb-access"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        Service = "apigateway.amazonaws.com"
-      },
-      Action = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "apigw_dynamodb_access" {
-  name = "apigw-dynamodb-read"
-  role = aws_iam_role.apigw_dynamodb_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = [
-        "dynamodb:DescribeTable",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan"
-      ],
-      Resource = aws_dynamodb_table.cloud-rand-prod-operation-records.arn
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "kms:Decrypt",
-          "kms:DescribeKey"
-        ],
-        Resource = aws_kms_key.cloud-rand-prod-dynamodb-key.arn
       }
     ]
   })

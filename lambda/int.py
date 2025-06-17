@@ -128,7 +128,7 @@ def handler(event, context):
             "range_max": range_max,
             "count": count,
             "values": random_values,
-            "src_chunk": entropy_seed.hex(),
+            "seed": entropy_seed.hex(),
         }
 
         table_name = os.environ.get("DYNAMODB_TABLE_NAME")
