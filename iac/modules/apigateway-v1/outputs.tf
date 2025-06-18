@@ -12,3 +12,8 @@ output "rest_api_execution_arn" {
   value       = aws_api_gateway_rest_api.this.execution_arn
   description = "The execution ARN of the API Gateway"
 }
+
+output "rest_api_stage_arn" {
+  value       = aws_api_gateway_stage.this.arn
+  description = "The ARN of the API Gateway stage"
+}
