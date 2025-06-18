@@ -12,3 +12,4 @@ output "rest_api_execution_arn" {
   value       = module.apigateway-v1.rest_api_execution_arn
   description = "The execution ARN of the API Gateway"
 }
+

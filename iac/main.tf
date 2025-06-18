@@ -1,7 +1,11 @@
+locals {
+  name_prefix = "${var.project_name}-${var.environment}"
+}
+
 module "apigateway-v1" {
-  source = "./modules/apigateway-v1"
-  apigw-config = {
-    name        = "cloud-rand"
+  source       = "./modules/apigateway-v1"
+  apigw_config = {
+    name        = "${local.name_prefix}-api"
     description = "API to serve verfiable random numbers"
     stage       = "v1"
     rate_limit  = 100
@@ -26,14 +30,14 @@ module "apigateway-v1" {
   }
 }
 
-resource "aws_dynamodb_table" "cloud-rand-prod-operation-records" {
-  name         = "cloud-rand-prod-operation-records"
+resource "aws_dynamodb_table" "operation_records" {
+  name         = "${local.name_prefix}-operation-records"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "record_id"
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.cloud-rand-prod-dynamodb-key.arn
+    kms_key_arn = aws_kms_key.dynamodb_key.arn
   }
 
   attribute {
@@ -42,13 +46,13 @@ resource "aws_dynamodb_table" "cloud-rand-prod-operation-records" {
   }
 
   tags = {
-    project     = "cloud-rand"
-    environment = "prod"
+    project     = var.project_name
+    environment = var.environment
   }
 }
 
-resource "aws_kms_key" "cloud-rand-prod-dynamodb-key" {
-  description             = "KMS key for cloud-rand-prod DynamoDB table"
+resource "aws_kms_key" "dynamodb_key" {
+  description             = "KMS key for ${local.name_prefix} DynamoDB table"
   deletion_window_in_days = 30
   enable_key_rotation     = true
 }
@@ -57,12 +61,12 @@ module "cloud-rand-int" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 7.21.0"
 
-  function_name  = "cloud-rand-prod-int"
+  function_name  = "${local.name_prefix}-int"
   handler        = "int.handler"
   runtime        = "python3.12"
   architectures  = ["arm64"]
   attach_policy  = true
-  policy         = aws_iam_policy.cloud-rand-prod-service-access.arn
+  policy         = aws_iam_policy.service_access.arn
   publish        = true
   create_package = false
 
@@ -71,7 +75,7 @@ module "cloud-rand-int" {
   cloudwatch_logs_retention_in_days = 7
 
   environment_variables = {
-    DYNAMODB_TABLE_NAME = aws_dynamodb_table.cloud-rand-prod-operation-records.name
+    DYNAMODB_TABLE_NAME = aws_dynamodb_table.operation_records.name
   }
 }
 
@@ -79,12 +83,12 @@ module "cloud-rand-hex" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 7.21.0"
 
-  function_name  = "cloud-rand-prod-hex"
+  function_name  = "${local.name_prefix}-hex"
   handler        = "hex.handler"
   runtime        = "python3.12"
   architectures  = ["arm64"]
   attach_policy  = true
-  policy         = aws_iam_policy.cloud-rand-prod-service-access.arn
+  policy         = aws_iam_policy.service_access.arn
   publish        = true
   create_package = false
 
@@ -93,7 +97,7 @@ module "cloud-rand-hex" {
   cloudwatch_logs_retention_in_days = 7
 
   environment_variables = {
-    DYNAMODB_TABLE_NAME = aws_dynamodb_table.cloud-rand-prod-operation-records.name
+    DYNAMODB_TABLE_NAME = aws_dynamodb_table.operation_records.name
   }
 }
 
@@ -101,12 +105,12 @@ module "cloud-rand-verify" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 7.21.0"
 
-  function_name  = "cloud-rand-prod-verify"
+  function_name  = "${local.name_prefix}-verify"
   handler        = "verify.handler"
   runtime        = "python3.12"
   architectures  = ["arm64"]
   attach_policy  = true
-  policy         = aws_iam_policy.cloud-rand-prod-service-access.arn
+  policy         = aws_iam_policy.service_access.arn
   publish        = true
   create_package = false
 
@@ -115,7 +119,7 @@ module "cloud-rand-verify" {
   cloudwatch_logs_retention_in_days = 7
 
   environment_variables = {
-    DYNAMODB_TABLE_NAME = aws_dynamodb_table.cloud-rand-prod-operation-records.name
+    DYNAMODB_TABLE_NAME = aws_dynamodb_table.operation_records.name
   }
 }
 
@@ -143,9 +147,9 @@ resource "aws_lambda_permission" "verify_api_gw" {
   source_arn    = "${module.apigateway-v1.rest_api_execution_arn}/*/*"
 }
 
-resource "aws_iam_policy" "cloud-rand-prod-service-access" {
-  name        = "cloud-rand-prod-service-access"
-  description = "Policy to allow grant cloud-rand-prod the necessary access"
+resource "aws_iam_policy" "service_access" {
+  name        = "${local.name_prefix}-service-access"
+  description = "Policy to allow ${local.name_prefix} the necessary access"
   lifecycle {
     create_before_destroy = false
   }
@@ -166,7 +170,7 @@ resource "aws_iam_policy" "cloud-rand-prod-service-access" {
           "kms:GenerateDataKey*",
           "kms:DescribeKey"
         ],
-        Resource = aws_kms_key.cloud-rand-prod-dynamodb-key.arn
+        Resource = aws_kms_key.dynamodb_key.arn
       },
       {
         Effect = "Allow",
@@ -177,7 +181,7 @@ resource "aws_iam_policy" "cloud-rand-prod-service-access" {
           "dynamodb:Scan",
           "dynamodb:PutItem"
         ],
-        Resource = aws_dynamodb_table.cloud-rand-prod-operation-records.arn
+        Resource = aws_dynamodb_table.operation_records.arn
       }
     ]
   })

@@ -1,17 +1,17 @@
 resource "aws_api_gateway_rest_api" "this" {
-  name        = var.apigw-config.name
-  description = var.apigw-config.description
+  name        = var.apigw_config.name
+  description = var.apigw_config.description
 }
 
 resource "aws_api_gateway_resource" "this" {
-  for_each    = { for idx, ep in var.apigw-config.endpoints : idx => ep }
+  for_each    = { for idx, ep in var.apigw_config.endpoints : idx => ep }
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_rest_api.this.root_resource_id
   path_part   = each.value.path
 }
 
 resource "aws_api_gateway_method" "this" {
-  for_each      = { for idx, ep in var.apigw-config.endpoints : idx => ep }
+  for_each      = { for idx, ep in var.apigw_config.endpoints : idx => ep }
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.this[each.key].id
   http_method   = each.value.method
@@ -19,7 +19,7 @@ resource "aws_api_gateway_method" "this" {
 }
 
 resource "aws_api_gateway_integration" "this" {
-  for_each                = { for idx, ep in var.apigw-config.endpoints : idx => ep }
+  for_each                = { for idx, ep in var.apigw_config.endpoints : idx => ep }
   rest_api_id             = aws_api_gateway_rest_api.this.id
   resource_id             = aws_api_gateway_resource.this[each.key].id
   http_method             = aws_api_gateway_method.this[each.key].http_method
@@ -35,7 +35,7 @@ resource "aws_api_gateway_deployment" "this" {
   ]
   rest_api_id = aws_api_gateway_rest_api.this.id
   triggers = {
-    redeploy = sha1(jsonencode(var.apigw-config.endpoints))
+    redeploy = sha1(jsonencode(var.apigw_config.endpoints))
   }
   lifecycle {
     create_before_destroy = true
@@ -45,8 +45,8 @@ resource "aws_api_gateway_deployment" "this" {
 resource "aws_api_gateway_stage" "this" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   deployment_id = aws_api_gateway_deployment.this.id
-  stage_name    = var.apigw-config.stage
-  description   = "Stage for ${var.apigw-config.name} API"
+  stage_name    = var.apigw_config.stage
+  description   = "Stage for ${var.apigw_config.name} API"
 }
 
 resource "aws_api_gateway_method_settings" "this" {
@@ -55,8 +55,8 @@ resource "aws_api_gateway_method_settings" "this" {
   method_path = "*/*"
 
   settings {
-    throttling_rate_limit  = var.apigw-config.rate_limit
-    throttling_burst_limit = var.apigw-config.burst_limit
+    throttling_rate_limit  = var.apigw_config.rate_limit
+    throttling_burst_limit = var.apigw_config.burst_limit
   }
 
 }
