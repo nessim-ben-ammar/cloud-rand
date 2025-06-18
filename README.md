@@ -5,8 +5,8 @@ uses AWS Lambda, API Gateway, DynamoDB and KMS managed through Terraform.
 
 ## Naming conventions
 
-- **Terraform resource names** use underscores (`_`) to comply with Terraform's
-  identifier requirements.
+ - **Terraform identifiers** (resource and module names) use underscores (`_`)
+   to comply with Terraform's naming rules.
 - **AWS resource names** are based on the pattern
   `<project>-<environment>-<component>`. The `project` and `environment` values
   come from the `project_name` and `environment` variables. This ensures that
