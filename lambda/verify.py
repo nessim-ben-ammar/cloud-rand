@@ -49,6 +49,34 @@ def handler(event, context):
         if not item:
             return _response(404, {"error": "Item not found"})
 
-        return _response(200, _json_safe(item))
+        # Reorder fields for response according to clarified order
+        ordered_item = {}
+        # 1. record_id
+        if "record_id" in item:
+            ordered_item["record_id"] = item["record_id"]
+        # 2. timestamp
+        if "timestamp" in item:
+            ordered_item["timestamp"] = item["timestamp"]
+        # 3. request entries
+        if "length" in item:
+            ordered_item["length"] = item["length"]
+        if "range_min" in item:
+            ordered_item["range_min"] = item["range_min"]
+        if "range_max" in item:
+            ordered_item["range_max"] = item["range_max"]
+        if "count" in item:
+            ordered_item["count"] = item["count"]
+        # 4. values
+        if "values" in item:
+            ordered_item["values"] = item["values"]
+        # 5. seed
+        if "seed" in item:
+            ordered_item["seed"] = item["seed"]
+        # Add any extra fields not in the preferred order
+        for k in item:
+            if k not in ordered_item:
+                ordered_item[k] = item[k]
+
+        return _response(200, _json_safe(ordered_item))
     except Exception as e:
         return _response(500, {"error": str(e)})

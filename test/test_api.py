@@ -2,7 +2,7 @@ import requests
 import sys
 
 
-api_id = "osrapr4qbh"
+api_id = "ep9pcp17a3"
 API_BASE_URL = f"https://{api_id}.execute-api.eu-central-1.amazonaws.com/v1/"
 
 # Step 1: Request a random hex
