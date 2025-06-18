@@ -9,3 +9,9 @@ variable "environment" {
   description = "The deployment environment (e.g., dev, prod, staging)"
   default     = "dev"
 }
+
+variable "project_name" {
+  type        = string
+  description = "Base name used for all resources"
+  default     = "cloud-rand"
+}

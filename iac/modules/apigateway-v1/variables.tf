@@ -1,4 +1,4 @@
-variable "apigw-config" {
+variable "apigw_config" {
   description = "API Gateway configuration"
   type = object({
     name        = string
