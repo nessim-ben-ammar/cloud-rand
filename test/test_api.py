@@ -32,7 +32,7 @@ verify_resp = requests.get(f"{API_BASE_URL}/verify", params={"record_id": record
 print("/verify response:", verify_resp.status_code, verify_resp.text)
 
 # Step 3: Request a random int
-int_payload = {"min": 1, "max": 10, "count": 3}
+int_payload = {"range_min": 1, "range_max": 10, "count": 3}
 int_headers = {"Content-Type": "application/json"}
 int_resp = requests.post(f"{API_BASE_URL}/int", json=int_payload, headers=int_headers)
 print("/int response:", int_resp.status_code, int_resp.text)

@@ -34,8 +34,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     Request body JSON:
     {
-        "min": int,
-        "max": int,
+        "range_min": int,
+        "range_max": int,
         "count": int (default=1)
     }
 
@@ -49,18 +49,20 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         request_data = json.loads(event.get("body", "{}"))
 
         try:
-            range_min = int(request_data["min"])
-            range_max = int(request_data["max"])
+            range_min = int(request_data["range_min"])
+            range_max = int(request_data["range_max"])
             count = int(request_data.get("count", 1))
         except (KeyError, ValueError, TypeError):
             return _response(
-                400, {"error": "min, max, and count must be valid integers"}
+                400, {"error": "range_min, range_max, and count must be valid integers"}
             )
 
         if not (1 <= count <= MAX_COUNT):
             return _response(400, {"error": f"Count must be between 1 and {MAX_COUNT}"})
         if range_min >= range_max:
-            return _response(400, {"error": "min must be strictly less than max"})
+            return _response(
+                400, {"error": "range_min must be strictly less than range_max"}
+            )
 
         range_size = range_max - range_min + 1
 
