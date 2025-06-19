@@ -2,7 +2,9 @@ import requests
 import sys
 
 
-api_id = "negvc9mjm1"
+# After deployment copy the API ID of the AWS API Gateway
+# The value is an output of the terraform deployment
+api_id = ""
 API_BASE_URL = f"https://{api_id}.execute-api.eu-central-1.amazonaws.com/v1/"
 
 # Step 1: Request a random hex

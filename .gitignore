@@ -1,3 +1,29 @@
+# Ignore Terraform state files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore .terraform directory
+.terraform/
+
+# Ignore plan output
+*.plan
+
+# Ignore backup files
+*.backup
+
+# Ignore local .terraformrc and terraform.rc
+.terraformrc
+terraform.rc
+
+
 build/
-lambda/test_api.py
 .DS_Store
