@@ -1,19 +1,29 @@
 import boto3
 import json
+import logging
 import os
 from botocore.exceptions import BotoCoreError, ClientError
 import decimal
+from typing import Any, Dict
+
+TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def _response(status_code, body):
+def _response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper to format API Gateway responses."""
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},
         "body": json.dumps(body),
+        "isBase64Encoded": False,
     }
 
 
-def _json_safe(obj):
+def _json_safe(obj: Any) -> Any:
+    """Recursively convert Decimal values to built-in types."""
     if isinstance(obj, list):
         return [_json_safe(i) for i in obj]
     elif isinstance(obj, dict):
@@ -25,13 +35,13 @@ def _json_safe(obj):
         return obj
 
 
-def handler(event, context):
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         record_id = event.get("queryStringParameters", {}).get("record_id")
         if not record_id:
             return _response(400, {"error": "record_id query parameter required"})
 
-        table_name = os.environ.get("DYNAMODB_TABLE_NAME")
+        table_name = TABLE_NAME
         if not table_name:
             return _response(
                 500, {"error": "DYNAMODB_TABLE_NAME environment variable not set"}
@@ -78,5 +88,6 @@ def handler(event, context):
                 ordered_item[k] = item[k]
 
         return _response(200, _json_safe(ordered_item))
-    except Exception as e:
+    except Exception as e:  # pragma: no cover - unexpected errors
+        logger.exception("Unhandled error")
         return _response(500, {"error": str(e)})

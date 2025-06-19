@@ -1,24 +1,32 @@
 import boto3
 import datetime
 import json
+import logging
 import os
 import uuid
+from typing import Any, Dict, List
 from botocore.exceptions import BotoCoreError, ClientError
 
 # Constants
 MAX_COUNT = 1024
 MAX_BYTES_TOTAL = 1024
+TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def _response(status_code, body):
+def _response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper to format API Gateway responses."""
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},
         "body": json.dumps(body),
+        "isBase64Encoded": False,
     }
 
 
-def handler(event, context):
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Lambda handler to generate verifiable random hex strings using AWS KMS.
 
@@ -85,7 +93,7 @@ def handler(event, context):
             "seed": entropy_pool.hex(),
         }
 
-        table_name = os.environ.get("DYNAMODB_TABLE_NAME")
+        table_name = TABLE_NAME
         if not table_name:
             return _response(
                 500, {"error": "DYNAMODB_TABLE_NAME environment variable not set"}
@@ -107,5 +115,6 @@ def handler(event, context):
 
         return _response(200, response_body)
 
-    except Exception as e:
+    except Exception as e:  # pragma: no cover - unexpected errors
+        logger.exception("Unhandled error")
         return _response(500, {"error": str(e)})
